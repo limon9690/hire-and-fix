@@ -1,14 +1,19 @@
-import app from './app';
-import config from './config';
+import { Server } from "http";
+import app from "./app";
+import { envVars } from "./app/config/env";
 
-async function main() {
-  try {
-    app.listen(config.port, () => {
-      console.log(`Example app listening on port <%= config.port %>`);
-    });
-  } catch (err) {
-    console.log(err);
-  }
+
+const port = envVars.PORT || 5000;
+let server: Server;
+
+const bootstrap = async () => {
+    try {
+        server = app.listen(port, () => {
+            console.log(`Server is running on http://localhost:${port}`);
+        })
+    } catch (error) {
+        console.log("Failed to start server!", error);
+    }
 }
 
-main();
+bootstrap();

@@ -1,0 +1,17 @@
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  profile         UserProfile?
+  vendorProfile   VendorProfile?
+  employeeProfile EmployeeProfile?
+  bookings        Booking[]
+  reviews         Review[]
+
+  @@map("users")
+}

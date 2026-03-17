@@ -1,0 +1,24 @@
+model EmployeeProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  vendorId          String   @map("vendor_id")
+  serviceCategoryId String   @map("service_category_id")
+  profilePhoto      String  @map("profile_photo")
+  bio               String
+  address           String
+  phone             String
+  hourlyRate        Decimal @db.Decimal(10, 2)   @map("hourly_rate")
+  experienceYears   Int      @map("experience_years")
+  isActive          Boolean  @default(true) @map("is_active")
+  isDeleted         Boolean  @default(false) @map("is_deleted")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user            User            @relation(fields: [userId], references: [id])
+  vendor          VendorProfile   @relation(fields: [vendorId], references: [id])
+  serviceCategory ServiceCategory @relation(fields: [serviceCategoryId], references: [id])
+  bookings        Booking[]
+  reviews         Review[]
+
+  @@map("employee_profiles")
+}

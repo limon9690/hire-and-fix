@@ -1,0 +1,9 @@
+model ServiceCategory {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  employees EmployeeProfile[]
+
+  @@map("service_categories")
+}

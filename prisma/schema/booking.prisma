@@ -1,0 +1,23 @@
+model Booking {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  vendorId       String        @map("vendor_id")
+  employeeId     String        @map("employee_id")
+  startTime      DateTime      @map("start_time")
+  endTime        DateTime      @map("end_time")
+  serviceAddress String        @map("service_address")
+  note           String?
+  totalPrice     Decimal @db.Decimal(10, 2)         @map("total_price")
+  bookingStatus  BookingStatus @default(PENDING) @map("booking_status")
+  paymentStatus  PaymentStatus @default(PENDING) @map("payment_status")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id])
+  vendor   VendorProfile   @relation(fields: [vendorId], references: [id])
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id])
+  payment  Payment?
+  review   Review?
+
+  @@map("bookings")
+}

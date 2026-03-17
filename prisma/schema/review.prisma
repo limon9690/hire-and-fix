@@ -1,0 +1,16 @@
+model Review {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  employeeId String   @map("employee_id")
+  bookingId  String   @unique @map("booking_id")
+  comment    String?
+  rating     Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id])
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id])
+  booking  Booking         @relation(fields: [bookingId], references: [id])
+
+  @@map("reviews")
+}
