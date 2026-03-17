@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { AuthServices } from "./auth.service";
-import { TLoginPayload, TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
+import { TCreateEmployeePayload, TLoginPayload, TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
 import { clearAuthCookie, setAuthCookie } from "./auth.utils";
@@ -26,6 +26,18 @@ const registerVendor = catchAsync(async (req : Request, res : Response) => {
         statusCode: status.CREATED,
         success: true,
         message: "Vendor registered successfully",
+        data: result,
+    });
+});
+
+const createEmployee = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body;
+    const result = await AuthServices.createEmployee(req.user.userId, payload as TCreateEmployeePayload);
+
+    sendResponse(res, {
+        statusCode: status.CREATED,
+        success: true,
+        message: "Employee created successfully",
         data: result,
     });
 });
@@ -71,6 +83,7 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
 export const AuthController = {
     registerUser,
     registerVendor,
+    createEmployee,
     login,
     logout,
     getMe

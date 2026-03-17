@@ -11,6 +11,8 @@ router.post("/register-user", validateRequest(authValidationSchemas.registerUser
 
 router.post("/register-vendor", validateRequest(authValidationSchemas.registerVendorSchema), AuthController.registerVendor);
 
+router.post("/create-employee", auth(Role.VENDOR), validateRequest(authValidationSchemas.createEmployeeSchema), AuthController.createEmployee);
+
 router.post("/login", validateRequest(authValidationSchemas.loginSchema), AuthController.login);
 
 router.post("/logout", auth(Role.USER, Role.VENDOR, Role.EMPLOYEE, Role.ADMIN), AuthController.logout);
