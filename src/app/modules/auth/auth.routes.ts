@@ -9,4 +9,6 @@ router.post("/register-user", validateRequest(authValidationSchemas.registerUser
 
 router.post("/register-vendor", validateRequest(authValidationSchemas.registerVendorSchema), AuthController.registerVendor);
 
+router.post("/login", validateRequest(authValidationSchemas.loginSchema), AuthController.login);
+
 export const AuthRoutes = router;

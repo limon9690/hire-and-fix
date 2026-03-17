@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { AuthServices } from "./auth.service";
-import { TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
+import { TLoginPayload, TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
+import { setAuthCookie } from "./auth.utils";
 
 const registerUser = catchAsync(async (req : Request, res : Response) => {
     const payload = req.body;
@@ -29,7 +30,22 @@ const registerVendor = catchAsync(async (req : Request, res : Response) => {
     });
 });
 
+const login = catchAsync(async (req : Request, res : Response) => {
+    const payload = req.body;
+    const result = await AuthServices.login(payload as TLoginPayload);
+
+    setAuthCookie(res, result.accessToken);
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "User logged in successfully",
+        data: result.user,
+    });
+});
+
 export const AuthController = {
     registerUser,
-    registerVendor
+    registerVendor,
+    login
 };

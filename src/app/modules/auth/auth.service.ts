@@ -3,8 +3,9 @@ import status from "http-status";
 import { Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
-import { TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
+import { TLoginPayload, TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
 import { envVars } from "../../config/env";
+import { generateAccessToken } from "./auth.utils";
 
 
 const registerUser = async (payload: TUserRegisterPayload) => {
@@ -114,7 +115,46 @@ const registerVendor = async (payload: TVendorRegisterPayload) => {
     });
 };
 
+const login = async (payload: TLoginPayload) => {
+    const normalizedEmail = payload.email.toLowerCase();
+
+    const user = await prisma.user.findUnique({
+        where: {
+            email: normalizedEmail
+        }
+    });
+
+    if (!user) {
+        throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
+    }
+
+    const isPasswordMatched = await bcrypt.compare(payload.password, user.password);
+
+    if (!isPasswordMatched) {
+        throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
+    }
+
+    const accessToken = generateAccessToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role
+    });
+
+    return {
+        accessToken,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        }
+    };
+};
+
 export const AuthServices = {
     registerUser,
-    registerVendor
+    registerVendor,
+    login
 };

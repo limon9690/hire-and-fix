@@ -55,10 +55,27 @@ const registerVendorSchema = registerUserSchema.extend({
         .min(1, "Address is required")
 });
 
+const loginSchema = z.object({
+    email: z
+        .string({
+            error: "Email is required"
+        })
+        .trim()
+        .min(1, "Email is required")
+        .email("Email must be valid"),
+    password: z
+        .string({
+            error: "Password is required"
+        })
+        .min(1, "Password is required")
+});
+
 export type TUserRegisterPayload = z.infer<typeof registerUserSchema>;
 export type TVendorRegisterPayload = z.infer<typeof registerVendorSchema>;
+export type TLoginPayload = z.infer<typeof loginSchema>;
 
 export const authValidationSchemas = {
     registerUserSchema,
     registerVendorSchema,
+    loginSchema,
 }
