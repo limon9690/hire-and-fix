@@ -3,11 +3,11 @@ model EmployeeProfile {
   userId            String   @unique @map("user_id")
   vendorId          String   @map("vendor_id")
   serviceCategoryId String   @map("service_category_id")
-  profilePhoto      String  @map("profile_photo")
+  profilePhoto      String   @map("profile_photo")
   bio               String
   address           String
   phone             String
-  hourlyRate        Decimal @db.Decimal(10, 2)   @map("hourly_rate")
+  hourlyRate        Decimal  @map("hourly_rate") @db.Decimal(10, 2)
   experienceYears   Int      @map("experience_years")
   isActive          Boolean  @default(true) @map("is_active")
   isDeleted         Boolean  @default(false) @map("is_deleted")

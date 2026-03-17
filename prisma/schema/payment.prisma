@@ -1,7 +1,7 @@
 model Payment {
   id            String        @id @default(uuid())
   bookingId     String        @unique @map("booking_id")
-  amount        Decimal @db.Decimal(10, 2)
+  amount        Decimal       @db.Decimal(10, 2)
   paymentMethod String        @map("payment_method")
   transactionId String?       @map("transaction_id")
   status        PaymentStatus @default(PENDING)
