@@ -30,6 +30,20 @@ const getAllServiceCategories = async () => {
     return serviceCategories;
 };
 
+const getServiceCategoryDetails = async (id: string) => {
+    const serviceCategory = await prisma.serviceCategory.findUnique({
+        where: {
+            id
+        }
+    });
+
+    if (!serviceCategory) {
+        throw new AppError(status.NOT_FOUND, "Service category not found");
+    }
+
+    return serviceCategory;
+};
+
 const updateServiceCategory = async (id: string, payload: TUpdateServiceCategoryPayload) => {
     const existingServiceCategory = await prisma.serviceCategory.findUnique({
         where: {
@@ -89,6 +103,7 @@ const deleteServiceCategory = async (id: string) => {
 export const ServiceCategoryServices = {
     createServiceCategory,
     getAllServiceCategories,
+    getServiceCategoryDetails,
     updateServiceCategory,
     deleteServiceCategory
 };

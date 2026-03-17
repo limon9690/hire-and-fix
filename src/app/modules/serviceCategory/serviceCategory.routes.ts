@@ -8,6 +8,7 @@ import { serviceCategoryValidationSchemas } from "./serviceCategory.validation";
 const router = Router();
 
 router.get("/", ServiceCategoryControllers.getAllServiceCategories);
+router.get("/:id", ServiceCategoryControllers.getServiceCategoryDetails);
 
 router.post(
     "/",

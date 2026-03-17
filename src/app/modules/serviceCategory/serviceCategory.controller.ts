@@ -28,6 +28,17 @@ const getAllServiceCategories = catchAsync(async (req: Request, res: Response) =
     });
 });
 
+const getServiceCategoryDetails = catchAsync(async (req: Request, res: Response) => {
+    const result = await ServiceCategoryServices.getServiceCategoryDetails(req.params.id as string);
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Service category retrieved successfully",
+        data: result
+    });
+});
+
 const updateServiceCategory = catchAsync(async (req: Request, res: Response) => {
     const result = await ServiceCategoryServices.updateServiceCategory(
         req.params.id as string,
@@ -56,6 +67,7 @@ const deleteServiceCategory = catchAsync(async (req: Request, res: Response) => 
 export const ServiceCategoryControllers = {
     createServiceCategory,
     getAllServiceCategories,
+    getServiceCategoryDetails,
     updateServiceCategory,
     deleteServiceCategory
 };
