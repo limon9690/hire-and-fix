@@ -19,6 +19,26 @@ router.get(
     BookingControllers.getBookingDetails
 );
 
+router.patch(
+    "/:id/cancel",
+    auth(Role.USER),
+    BookingControllers.cancelBooking
+);
+
+router.patch(
+    "/:id/status",
+    auth(Role.VENDOR),
+    validateRequest(bookingValidationSchemas.updateBookingStatusByVendorSchema),
+    BookingControllers.updateBookingStatusByVendor
+);
+
+router.patch(
+    "/:id/employee-status",
+    auth(Role.EMPLOYEE),
+    validateRequest(bookingValidationSchemas.updateBookingStatusByEmployeeSchema),
+    BookingControllers.updateBookingStatusByEmployee
+);
+
 router.post(
     "/",
     auth(Role.USER),

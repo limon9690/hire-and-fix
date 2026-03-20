@@ -3,7 +3,11 @@ import status from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { BookingServices } from "./booking.service";
-import { TCreateBookingPayload } from "./booking.validation";
+import {
+    TCreateBookingPayload,
+    TUpdateBookingStatusByEmployeePayload,
+    TUpdateBookingStatusByVendorPayload
+} from "./booking.validation";
 
 const createBooking = catchAsync(async (req: Request, res: Response) => {
     const result = await BookingServices.createBooking(
@@ -45,8 +49,55 @@ const getBookingDetails = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const cancelBooking = catchAsync(async (req: Request, res: Response) => {
+    const result = await BookingServices.cancelBooking(
+        req.params.id as string,
+        req.user.userId
+    );
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Booking cancelled successfully",
+        data: result
+    });
+});
+
+const updateBookingStatusByVendor = catchAsync(async (req: Request, res: Response) => {
+    const result = await BookingServices.updateBookingStatusByVendor(
+        req.user.userId,
+        req.params.id as string,
+        req.body as TUpdateBookingStatusByVendorPayload
+    );
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Booking status updated successfully",
+        data: result
+    });
+});
+
+const updateBookingStatusByEmployee = catchAsync(async (req: Request, res: Response) => {
+    const result = await BookingServices.updateBookingStatusByEmployee(
+        req.user.userId,
+        req.params.id as string,
+        req.body as TUpdateBookingStatusByEmployeePayload
+    );
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Booking status updated successfully",
+        data: result
+    });
+});
+
 export const BookingControllers = {
     createBooking,
     getMyBookings,
-    getBookingDetails
+    getBookingDetails,
+    cancelBooking,
+    updateBookingStatusByVendor,
+    updateBookingStatusByEmployee
 };

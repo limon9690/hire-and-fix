@@ -1,4 +1,5 @@
 import z from "zod";
+import { BookingStatus } from "../../../../prisma/generated/prisma/enums";
 
 const createBookingSchema = z.object({
     employeeId: z
@@ -44,6 +45,29 @@ const createBookingSchema = z.object({
 
 export type TCreateBookingPayload = z.infer<typeof createBookingSchema>;
 
+const updateBookingStatusByVendorSchema = z.object({
+    bookingStatus: z.enum([
+        BookingStatus.ACCEPTED,
+        BookingStatus.REJECTED,
+        BookingStatus.IN_PROGRESS,
+        BookingStatus.COMPLETED,
+        BookingStatus.CANCELLED
+    ])
+});
+
+export type TUpdateBookingStatusByVendorPayload = z.infer<typeof updateBookingStatusByVendorSchema>;
+
+const updateBookingStatusByEmployeeSchema = z.object({
+    bookingStatus: z.enum([
+        BookingStatus.IN_PROGRESS,
+        BookingStatus.COMPLETED
+    ])
+});
+
+export type TUpdateBookingStatusByEmployeePayload = z.infer<typeof updateBookingStatusByEmployeeSchema>;
+
 export const bookingValidationSchemas = {
-    createBookingSchema
+    createBookingSchema,
+    updateBookingStatusByVendorSchema,
+    updateBookingStatusByEmployeeSchema
 };

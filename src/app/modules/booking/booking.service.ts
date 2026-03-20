@@ -2,13 +2,35 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus, Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
-import { TCreateBookingPayload } from "./booking.validation";
+import {
+    TCreateBookingPayload,
+    TUpdateBookingStatusByEmployeePayload,
+    TUpdateBookingStatusByVendorPayload
+} from "./booking.validation";
 
 const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
     BookingStatus.PENDING,
     BookingStatus.ACCEPTED,
     BookingStatus.IN_PROGRESS
 ];
+
+const VENDOR_BOOKING_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+    [BookingStatus.PENDING]: [BookingStatus.ACCEPTED, BookingStatus.REJECTED],
+    [BookingStatus.ACCEPTED]: [BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED],
+    [BookingStatus.IN_PROGRESS]: [BookingStatus.COMPLETED],
+    [BookingStatus.COMPLETED]: [],
+    [BookingStatus.REJECTED]: [],
+    [BookingStatus.CANCELLED]: []
+};
+
+const EMPLOYEE_BOOKING_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+    [BookingStatus.PENDING]: [],
+    [BookingStatus.ACCEPTED]: [BookingStatus.IN_PROGRESS],
+    [BookingStatus.IN_PROGRESS]: [BookingStatus.COMPLETED],
+    [BookingStatus.COMPLETED]: [],
+    [BookingStatus.REJECTED]: [],
+    [BookingStatus.CANCELLED]: []
+};
 
 const bookingIncludeConfig = {
     user: {
@@ -286,8 +308,189 @@ const getBookingDetails = async (bookingId: string, userId: string, role: Role) 
     throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
 };
 
+const cancelBooking = async (bookingId: string, userId: string) => {
+    const booking = await prisma.booking.findUnique({
+        where: {
+            id: bookingId
+        },
+        include: bookingIncludeConfig
+    });
+
+    if (!booking) {
+        throw new AppError(status.NOT_FOUND, "Booking not found");
+    }
+
+    if (booking.userId !== userId) {
+        throw new AppError(status.FORBIDDEN, "You are forbidden from cancelling this booking");
+    }
+
+    if (
+        booking.bookingStatus === BookingStatus.COMPLETED ||
+        booking.bookingStatus === BookingStatus.CANCELLED
+    ) {
+        throw new AppError(status.BAD_REQUEST, "This booking cannot be cancelled");
+    }
+
+    if (new Date() >= booking.startTime) {
+        throw new AppError(status.BAD_REQUEST, "Booking can only be cancelled before service start time");
+    }
+
+    const cancelledBooking = await prisma.booking.update({
+        where: {
+            id: booking.id
+        },
+        data: {
+            bookingStatus: BookingStatus.CANCELLED
+        },
+        include: bookingIncludeConfig
+    });
+
+    return cancelledBooking;
+};
+
+const updateBookingStatusByVendor = async (
+    vendorUserId: string,
+    bookingId: string,
+    payload: TUpdateBookingStatusByVendorPayload
+) => {
+    const vendorProfile = await prisma.vendorProfile.findUnique({
+        where: {
+            userId: vendorUserId
+        }
+    });
+
+    if (!vendorProfile) {
+        throw new AppError(status.NOT_FOUND, "Vendor profile not found");
+    }
+
+    const booking = await prisma.booking.findUnique({
+        where: {
+            id: bookingId
+        },
+        include: bookingIncludeConfig
+    });
+
+    if (!booking) {
+        throw new AppError(status.NOT_FOUND, "Booking not found");
+    }
+
+    if (booking.vendorId !== vendorProfile.id) {
+        throw new AppError(status.FORBIDDEN, "You are forbidden from updating this booking");
+    }
+
+    const targetStatus = payload.bookingStatus;
+    const currentStatus = booking.bookingStatus;
+
+    if (targetStatus === currentStatus) {
+        throw new AppError(status.BAD_REQUEST, "Booking is already in the requested status");
+    }
+
+    const allowedNextStatuses = VENDOR_BOOKING_STATUS_TRANSITIONS[currentStatus];
+
+    if (!allowedNextStatuses.includes(targetStatus)) {
+        throw new AppError(
+            status.BAD_REQUEST,
+            `Invalid status transition from ${currentStatus} to ${targetStatus}`
+        );
+    }
+
+    const now = new Date();
+
+    if (targetStatus === BookingStatus.IN_PROGRESS && now < booking.startTime) {
+        throw new AppError(status.BAD_REQUEST, "Booking cannot start before service start time");
+    }
+
+    if (targetStatus === BookingStatus.COMPLETED && now < booking.endTime) {
+        throw new AppError(status.BAD_REQUEST, "Booking cannot be completed before service end time");
+    }
+
+    const updatedBooking = await prisma.booking.update({
+        where: {
+            id: booking.id
+        },
+        data: {
+            bookingStatus: targetStatus
+        },
+        include: bookingIncludeConfig
+    });
+
+    return updatedBooking;
+};
+
+const updateBookingStatusByEmployee = async (
+    employeeUserId: string,
+    bookingId: string,
+    payload: TUpdateBookingStatusByEmployeePayload
+) => {
+    const employeeProfile = await prisma.employeeProfile.findUnique({
+        where: {
+            userId: employeeUserId
+        }
+    });
+
+    if (!employeeProfile || employeeProfile.isDeleted) {
+        throw new AppError(status.NOT_FOUND, "Employee profile not found");
+    }
+
+    const booking = await prisma.booking.findUnique({
+        where: {
+            id: bookingId
+        },
+        include: bookingIncludeConfig
+    });
+
+    if (!booking) {
+        throw new AppError(status.NOT_FOUND, "Booking not found");
+    }
+
+    if (booking.employeeId !== employeeProfile.id) {
+        throw new AppError(status.FORBIDDEN, "You are forbidden from updating this booking");
+    }
+
+    const targetStatus = payload.bookingStatus;
+    const currentStatus = booking.bookingStatus;
+
+    if (targetStatus === currentStatus) {
+        throw new AppError(status.BAD_REQUEST, "Booking is already in the requested status");
+    }
+
+    const allowedNextStatuses = EMPLOYEE_BOOKING_STATUS_TRANSITIONS[currentStatus];
+
+    if (!allowedNextStatuses.includes(targetStatus)) {
+        throw new AppError(
+            status.BAD_REQUEST,
+            `Invalid status transition from ${currentStatus} to ${targetStatus}`
+        );
+    }
+
+    const now = new Date();
+
+    if (targetStatus === BookingStatus.IN_PROGRESS && now < booking.startTime) {
+        throw new AppError(status.BAD_REQUEST, "Booking cannot start before service start time");
+    }
+
+    if (targetStatus === BookingStatus.COMPLETED && now < booking.endTime) {
+        throw new AppError(status.BAD_REQUEST, "Booking cannot be completed before service end time");
+    }
+
+    const updatedBooking = await prisma.booking.update({
+        where: {
+            id: booking.id
+        },
+        data: {
+            bookingStatus: targetStatus
+        },
+        include: bookingIncludeConfig
+    });
+
+    return updatedBooking;
+};
+
 export const BookingServices = {
     createBooking,
     getMyBookings,
-    getBookingDetails
+    getBookingDetails,
+    cancelBooking,
+    updateBookingStatusByVendor,
+    updateBookingStatusByEmployee
 };
