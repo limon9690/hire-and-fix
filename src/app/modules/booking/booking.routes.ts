@@ -7,6 +7,18 @@ import { bookingValidationSchemas } from "./booking.validation";
 
 const router = Router();
 
+router.get(
+    "/me",
+    auth(Role.USER, Role.VENDOR, Role.EMPLOYEE),
+    BookingControllers.getMyBookings
+);
+
+router.get(
+    "/:id",
+    auth(Role.USER, Role.VENDOR, Role.EMPLOYEE, Role.ADMIN),
+    BookingControllers.getBookingDetails
+);
+
 router.post(
     "/",
     auth(Role.USER),

@@ -10,6 +10,43 @@ const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
     BookingStatus.IN_PROGRESS
 ];
 
+const bookingIncludeConfig = {
+    user: {
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+        }
+    },
+    vendor: {
+        select: {
+            id: true,
+            vendorName: true,
+            logo: true,
+            phone: true,
+            address: true,
+            isApproved: true,
+            isActive: true
+        }
+    },
+    employee: {
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true
+                }
+            },
+            serviceCategory: true
+        }
+    },
+    payment: true,
+    review: true
+} as const;
+
 const BOOKING_WINDOW_START_MINUTES = 9 * 60;
 const BOOKING_WINDOW_END_MINUTES = 17 * 60;
 
@@ -132,45 +169,125 @@ const createBooking = async (userId: string, payload: TCreateBookingPayload) => 
             bookingStatus: BookingStatus.PENDING,
             paymentStatus: PaymentStatus.PENDING
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            employee: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true
-                        }
-                    },
-                    serviceCategory: true
-                }
-            }
-        }
+        include: bookingIncludeConfig
     });
 
     return booking;
 };
 
+const getMyBookings = async (userId: string, role: Role) => {
+    let whereClause: {
+        userId?: string;
+        vendorId?: string;
+        employeeId?: string;
+    } = {};
+
+    if (role === Role.USER) {
+        whereClause.userId = userId;
+    } else if (role === Role.VENDOR) {
+        const vendorProfile = await prisma.vendorProfile.findUnique({
+            where: {
+                userId
+            }
+        });
+
+        if (!vendorProfile) {
+            throw new AppError(status.NOT_FOUND, "Vendor profile not found");
+        }
+
+        whereClause.vendorId = vendorProfile.id;
+    } else if (role === Role.EMPLOYEE) {
+        const employeeProfile = await prisma.employeeProfile.findUnique({
+            where: {
+                userId
+            }
+        });
+
+        if (!employeeProfile || employeeProfile.isDeleted) {
+            throw new AppError(status.NOT_FOUND, "Employee profile not found");
+        }
+
+        whereClause.employeeId = employeeProfile.id;
+    } else {
+        throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
+    }
+
+    const bookings = await prisma.booking.findMany({
+        where: whereClause,
+        include: bookingIncludeConfig,
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+
+    return bookings;
+};
+
+const getBookingDetails = async (bookingId: string, userId: string, role: Role) => {
+    const booking = await prisma.booking.findUnique({
+        where: {
+            id: bookingId
+        },
+        include: bookingIncludeConfig
+    });
+
+    if (!booking) {
+        throw new AppError(status.NOT_FOUND, "Booking not found");
+    }
+
+    if (role === Role.ADMIN) {
+        return booking;
+    }
+
+    if (role === Role.USER) {
+        if (booking.userId !== userId) {
+            throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
+        }
+
+        return booking;
+    }
+
+    if (role === Role.VENDOR) {
+        const vendorProfile = await prisma.vendorProfile.findUnique({
+            where: {
+                userId
+            }
+        });
+
+        if (!vendorProfile) {
+            throw new AppError(status.NOT_FOUND, "Vendor profile not found");
+        }
+
+        if (booking.vendorId !== vendorProfile.id) {
+            throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
+        }
+
+        return booking;
+    }
+
+    if (role === Role.EMPLOYEE) {
+        const employeeProfile = await prisma.employeeProfile.findUnique({
+            where: {
+                userId
+            }
+        });
+
+        if (!employeeProfile || employeeProfile.isDeleted) {
+            throw new AppError(status.NOT_FOUND, "Employee profile not found");
+        }
+
+        if (booking.employeeId !== employeeProfile.id) {
+            throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
+        }
+
+        return booking;
+    }
+
+    throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
+};
+
 export const BookingServices = {
-    createBooking
+    createBooking,
+    getMyBookings,
+    getBookingDetails
 };
