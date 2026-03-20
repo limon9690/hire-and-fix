@@ -1,0 +1,32 @@
+import { Request, Response } from "express";
+import status from "http-status";
+import { catchAsync } from "../../utils/catchAsync";
+import { sendResponse } from "../../utils/sendResponse";
+import { VendorServices } from "./vendor.service";
+
+const getAllVendors = catchAsync(async (req: Request, res: Response) => {
+    const result = await VendorServices.getAllVendors();
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Vendors retrieved successfully",
+        data: result
+    });
+});
+
+const getVendorDetails = catchAsync(async (req: Request, res: Response) => {
+    const result = await VendorServices.getVendorDetails(req.params.id as string);
+
+    sendResponse(res, {
+        statusCode: status.OK,
+        success: true,
+        message: "Vendor retrieved successfully",
+        data: result
+    });
+});
+
+export const VendorControllers = {
+    getAllVendors,
+    getVendorDetails
+};

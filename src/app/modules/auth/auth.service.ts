@@ -205,7 +205,6 @@ const login = async (payload: TLoginPayload) => {
         throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
     }
 
-    // check if the user is active or if it's a vendor, check if the vendor profile is approved and active or if it's an employee, check if the employee profile is active and not delted
     if (user.role === Role.USER) {
         const profile = await prisma.userProfile.findUnique({
             where: {
