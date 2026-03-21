@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { AdminRoutes } from "../modules/admin/admin.routes";
 import { AuthRoutes } from "../modules/auth/auth.routes";
 import { BookingRoutes } from "../modules/booking/booking.routes";
 import { EmployeeRoutes } from "../modules/employee/employee.routes";
@@ -8,6 +9,7 @@ import { VendorRoutes } from "../modules/vendor/vendor.routes";
 
 const router = Router();
 
+router.use('/admin', AdminRoutes);
 router.use('/auth', AuthRoutes);
 router.use('/bookings', BookingRoutes);
 router.use('/employees', EmployeeRoutes);
