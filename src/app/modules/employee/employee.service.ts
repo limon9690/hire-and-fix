@@ -2,41 +2,63 @@ import status from "http-status";
 import { BookingStatus } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateEmployeePayload, TUpdateMyProfilePayload } from "./employee.validation";
 
-const getAllEmployees = async () => {
-    const employees = await prisma.employeeProfile.findMany({
-        where: {
-            isDeleted: false,
-            isActive: true,
-        },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            serviceCategory: true,
-        }
-    });
+const employeeUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    createdAt: true,
+    updatedAt: true
+} as const;
 
-    return employees;
+const employeeVendorSelect = {
+    id: true,
+    vendorName: true,
+    logo: true,
+    phone: true,
+    address: true,
+    isApproved: true,
+    isActive: true
+} as const;
+
+const employeeDetailsInclude = {
+    user: {
+        select: employeeUserSelect
+    },
+    vendor: {
+        select: employeeVendorSelect
+    },
+    serviceCategory: true
+} as const;
+
+const getAllEmployees = async (queryOptions: TQueryOptions) => {
+    const whereClause = {
+        isDeleted: false,
+        isActive: true
+    };
+
+    const [employees, total] = await Promise.all([
+        prisma.employeeProfile.findMany({
+            where: whereClause,
+            include: employeeDetailsInclude,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.employeeProfile.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: employees,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const getEmployeeDetails = async (id: string) => {
@@ -45,30 +67,7 @@ const getEmployeeDetails = async (id: string) => {
             id,
             isDeleted: false
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            serviceCategory: true
-        }
+        include: employeeDetailsInclude
     });
 
     if (!employee) {
@@ -78,7 +77,7 @@ const getEmployeeDetails = async (id: string) => {
     return employee;
 };
 
-const getMyEmployees = async (vendorUserId: string) => {
+const getMyEmployees = async (vendorUserId: string, queryOptions: TQueryOptions) => {
     const vendorProfile = await prisma.vendorProfile.findUnique({
         where: {
             userId: vendorUserId
@@ -89,38 +88,30 @@ const getMyEmployees = async (vendorUserId: string) => {
         throw new AppError(status.NOT_FOUND, "Vendor profile not found");
     }
 
-    const employees = await prisma.employeeProfile.findMany({
-        where: {
-            vendorId: vendorProfile.id,
-            isDeleted: false
-        },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            serviceCategory: true
-        }
-    });
+    const whereClause = {
+        vendorId: vendorProfile.id,
+        isDeleted: false
+    };
 
-    return employees;
+    const [employees, total] = await Promise.all([
+        prisma.employeeProfile.findMany({
+            where: whereClause,
+            include: employeeDetailsInclude,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.employeeProfile.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: employees,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const deleteMyEmployee = async (vendorUserId: string, employeeId: string) => {
@@ -174,30 +165,7 @@ const deleteMyEmployee = async (vendorUserId: string, employeeId: string) => {
             isDeleted: true,
             isActive: false
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            serviceCategory: true
-        }
+        include: employeeDetailsInclude
     });
 
     return deletedEmployee;
@@ -287,30 +255,7 @@ const updateMyEmployee = async (
                 ...(payload.experienceYears !== undefined && { experienceYears: payload.experienceYears }),
                 ...(payload.isActive !== undefined && { isActive: payload.isActive })
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                        createdAt: true,
-                        updatedAt: true
-                    }
-                },
-                vendor: {
-                    select: {
-                        id: true,
-                        vendorName: true,
-                        logo: true,
-                        phone: true,
-                        address: true,
-                        isApproved: true,
-                        isActive: true
-                    }
-                },
-                serviceCategory: true
-            }
+            include: employeeDetailsInclude
         });
     });
 
@@ -348,30 +293,7 @@ const updateMyProfile = async (
             ...(payload.address && { address: payload.address }),
             ...(payload.phone && { phone: payload.phone })
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            serviceCategory: true
-        }
+        include: employeeDetailsInclude
     });
 
     return updatedEmployee;

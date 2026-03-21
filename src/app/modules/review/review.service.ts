@@ -2,6 +2,7 @@ import status from "http-status";
 import { BookingStatus, Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TCreateReviewPayload, TUpdateReviewPayload } from "./review.validation";
 
 const createReview = async (userId: string, payload: TCreateReviewPayload) => {
@@ -80,7 +81,7 @@ const createReview = async (userId: string, payload: TCreateReviewPayload) => {
     return review;
 };
 
-const getReviewsByEmployee = async (employeeId: string) => {
+const getReviewsByEmployee = async (employeeId: string, queryOptions: TQueryOptions) => {
     const employee = await prisma.employeeProfile.findUnique({
         where: {
             id: employeeId
@@ -111,8 +112,10 @@ const getReviewsByEmployee = async (employeeId: string) => {
                     }
                 }
             },
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
             orderBy: {
-                createdAt: "desc"
+                [queryOptions.sortBy]: queryOptions.sortOrder
             }
         }),
         prisma.review.aggregate({
@@ -131,7 +134,8 @@ const getReviewsByEmployee = async (employeeId: string) => {
     return {
         averageRating: Number((reviewStats._avg.rating ?? 0).toFixed(2)),
         totalReviews: reviewStats._count._all,
-        reviews
+        reviews,
+        meta: buildPaginationMeta(reviewStats._count._all, queryOptions.page, queryOptions.limit)
     };
 };
 

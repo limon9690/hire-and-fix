@@ -1,6 +1,7 @@
 import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TCreateServiceCategoryPayload, TUpdateServiceCategoryPayload } from "./serviceCategory.validation";
 
 const createServiceCategory = async (payload: TCreateServiceCategoryPayload) => {
@@ -24,10 +25,22 @@ const createServiceCategory = async (payload: TCreateServiceCategoryPayload) => 
     return serviceCategory;
 };
 
-const getAllServiceCategories = async () => {
-    const serviceCategories = await prisma.serviceCategory.findMany();
+const getAllServiceCategories = async (queryOptions: TQueryOptions) => {
+    const [serviceCategories, total] = await Promise.all([
+        prisma.serviceCategory.findMany({
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.serviceCategory.count()
+    ]);
 
-    return serviceCategories;
+    return {
+        data: serviceCategories,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const getServiceCategoryDetails = async (id: string) => {

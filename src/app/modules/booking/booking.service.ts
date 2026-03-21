@@ -2,6 +2,7 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus, Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import {
     TCreateBookingPayload,
     TUpdateBookingStatusByEmployeePayload,
@@ -71,6 +72,11 @@ const bookingIncludeConfig = {
 
 const BOOKING_WINDOW_START_MINUTES = 9 * 60;
 const BOOKING_WINDOW_END_MINUTES = 17 * 60;
+
+type TGetMyBookingsFilters = {
+    bookingStatus?: BookingStatus;
+    paymentStatus?: PaymentStatus;
+};
 
 const getMinutesFromIsoLocalTime = (isoDateTime: string) => {
     const timeMatch = isoDateTime.match(/T(\d{2}):(\d{2})/);
@@ -197,11 +203,18 @@ const createBooking = async (userId: string, payload: TCreateBookingPayload) => 
     return booking;
 };
 
-const getMyBookings = async (userId: string, role: Role) => {
+const getMyBookings = async (
+    userId: string,
+    role: Role,
+    queryOptions: TQueryOptions,
+    filters: TGetMyBookingsFilters
+) => {
     let whereClause: {
         userId?: string;
         vendorId?: string;
         employeeId?: string;
+        bookingStatus?: BookingStatus;
+        paymentStatus?: PaymentStatus;
     } = {};
 
     if (role === Role.USER) {
@@ -234,15 +247,31 @@ const getMyBookings = async (userId: string, role: Role) => {
         throw new AppError(status.FORBIDDEN, "You are forbidden from accessing this resource");
     }
 
-    const bookings = await prisma.booking.findMany({
-        where: whereClause,
-        include: bookingIncludeConfig,
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
+    whereClause = {
+        ...whereClause,
+        ...(filters.bookingStatus && { bookingStatus: filters.bookingStatus }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus })
+    };
 
-    return bookings;
+    const [bookings, total] = await Promise.all([
+        prisma.booking.findMany({
+            where: whereClause,
+            include: bookingIncludeConfig,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.booking.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: bookings,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const getBookingDetails = async (bookingId: string, userId: string, role: Role) => {

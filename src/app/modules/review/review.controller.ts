@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import status from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { sendResponse } from "../../utils/sendResponse";
 import { ReviewServices } from "./review.service";
 import { TCreateReviewPayload, TUpdateReviewPayload } from "./review.validation";
@@ -20,13 +21,28 @@ const createReview = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getReviewsByEmployee = catchAsync(async (req: Request, res: Response) => {
-    const result = await ReviewServices.getReviewsByEmployee(req.params.employeeId as string);
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "updatedAt", "rating"]
+    });
+
+    const result = await ReviewServices.getReviewsByEmployee(
+        req.params.employeeId as string,
+        queryOptions
+    );
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Reviews retrieved successfully",
-        data: result
+        data: {
+            averageRating: result.averageRating,
+            totalReviews: result.totalReviews,
+            reviews: result.reviews
+        },
+        meta: result.meta
     });
 });
 

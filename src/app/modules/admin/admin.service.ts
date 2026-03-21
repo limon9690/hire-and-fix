@@ -2,7 +2,69 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus, Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateUserStatusPayload, TUpdateVendorApprovalPayload } from "./admin.validation";
+
+const basicUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    role: true
+} as const;
+
+const basicVendorSelect = {
+    id: true,
+    vendorName: true,
+    logo: true,
+    phone: true,
+    address: true,
+    isApproved: true,
+    isActive: true
+} as const;
+
+const employeeWithUserAndCategoryInclude = {
+    include: {
+        user: {
+            select: basicUserSelect
+        },
+        serviceCategory: true
+    }
+} as const;
+
+const bookingDetailsInclude = {
+    user: {
+        select: basicUserSelect
+    },
+    vendor: {
+        select: basicVendorSelect
+    },
+    employee: employeeWithUserAndCategoryInclude,
+    payment: true,
+    review: true
+} as const;
+
+const paymentDetailsInclude = {
+    booking: {
+        include: {
+            user: {
+                select: basicUserSelect
+            },
+            vendor: {
+                select: basicVendorSelect
+            },
+            employee: employeeWithUserAndCategoryInclude
+        }
+    }
+} as const;
+
+type TGetAllBookingsFilters = {
+    bookingStatus?: BookingStatus;
+    paymentStatus?: PaymentStatus;
+};
+
+type TGetAllPaymentsFilters = {
+    status?: PaymentStatus;
+};
 
 const getDashboardSummary = async () => {
     const [
@@ -99,116 +161,83 @@ const getDashboardSummary = async () => {
     };
 };
 
-const getAllUsers = async () => {
-    const users = await prisma.user.findMany({
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            createdAt: true,
-            updatedAt: true
-        },
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
-
-    return users;
-};
-
-const getAllBookings = async () => {
-    const bookings = await prisma.booking.findMany({
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true
-                }
+const getAllUsers = async (queryOptions: TQueryOptions) => {
+    const [users, total] = await Promise.all([
+        prisma.user.findMany({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                createdAt: true,
+                updatedAt: true
             },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            employee: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true
-                        }
-                    },
-                    serviceCategory: true
-                }
-            },
-            payment: true,
-            review: true
-        },
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
-
-    return bookings;
-};
-
-const getAllPayments = async () => {
-    const payments = await prisma.payment.findMany({
-        include: {
-            booking: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true
-                        }
-                    },
-                    vendor: {
-                        select: {
-                            id: true,
-                            vendorName: true,
-                            logo: true,
-                            phone: true,
-                            address: true,
-                            isApproved: true,
-                            isActive: true
-                        }
-                    },
-                    employee: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                    role: true
-                                }
-                            },
-                            serviceCategory: true
-                        }
-                    }
-                }
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
             }
-        },
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
+        }),
+        prisma.user.count()
+    ]);
 
-    return payments;
+    return {
+        data: users,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
+};
+
+const getAllBookings = async (queryOptions: TQueryOptions, filters: TGetAllBookingsFilters) => {
+    const whereClause = {
+        ...(filters.bookingStatus && { bookingStatus: filters.bookingStatus }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus })
+    };
+
+    const [bookings, total] = await Promise.all([
+        prisma.booking.findMany({
+            where: whereClause,
+            include: bookingDetailsInclude,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.booking.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: bookings,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
+};
+
+const getAllPayments = async (queryOptions: TQueryOptions, filters: TGetAllPaymentsFilters) => {
+    const whereClause = {
+        ...(filters.status && { status: filters.status })
+    };
+
+    const [payments, total] = await Promise.all([
+        prisma.payment.findMany({
+            where: whereClause,
+            include: paymentDetailsInclude,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.payment.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: payments,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const getPaymentDetails = async (id: string) => {
@@ -216,44 +245,7 @@ const getPaymentDetails = async (id: string) => {
         where: {
             id
         },
-        include: {
-            booking: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true
-                        }
-                    },
-                    vendor: {
-                        select: {
-                            id: true,
-                            vendorName: true,
-                            logo: true,
-                            phone: true,
-                            address: true,
-                            isApproved: true,
-                            isActive: true
-                        }
-                    },
-                    employee: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                    role: true
-                                }
-                            },
-                            serviceCategory: true
-                        }
-                    }
-                }
-            }
-        }
+        include: paymentDetailsInclude
     });
 
     if (!payment) {
@@ -268,42 +260,7 @@ const getBookingDetails = async (id: string) => {
         where: {
             id
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true
-                }
-            },
-            vendor: {
-                select: {
-                    id: true,
-                    vendorName: true,
-                    logo: true,
-                    phone: true,
-                    address: true,
-                    isApproved: true,
-                    isActive: true
-                }
-            },
-            employee: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true
-                        }
-                    },
-                    serviceCategory: true
-                }
-            },
-            payment: true,
-            review: true
-        }
+        include: bookingDetailsInclude
     });
 
     if (!booking) {

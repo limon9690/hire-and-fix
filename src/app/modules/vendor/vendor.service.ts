@@ -2,7 +2,29 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateMyVendorPayload } from "./vendor.validation";
+
+const vendorUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    createdAt: true,
+    updatedAt: true
+} as const;
+
+const vendorWithUserInclude = {
+    user: {
+        select: vendorUserSelect
+    }
+} as const;
+
+type TGetAllVendorsFilters = {
+    isApproved?: boolean;
+    isActive?: boolean;
+    vendorName?: string;
+};
 
 const getReviewSummaryByVendorId = async (vendorId: string) => {
     const reviewStats = await prisma.review.aggregate({
@@ -26,27 +48,37 @@ const getReviewSummaryByVendorId = async (vendorId: string) => {
     };
 };
 
-const getAllVendors = async () => {
-    const vendors = await prisma.vendorProfile.findMany({
-        where: {
-            isActive: true,
-            isApproved: true
-        },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
+const getAllVendors = async (queryOptions: TQueryOptions, filters: TGetAllVendorsFilters) => {
+    const whereClause = {
+        ...(filters.isActive !== undefined && { isActive: filters.isActive }),
+        ...(filters.isApproved !== undefined && { isApproved: filters.isApproved }),
+        ...(filters.vendorName && {
+            vendorName: {
+                contains: filters.vendorName,
+                mode: "insensitive" as const
             }
-        }
-    });
+        })
+    };
 
-    return vendors;
+    const [vendors, total] = await Promise.all([
+        prisma.vendorProfile.findMany({
+            where: whereClause,
+            include: vendorWithUserInclude,
+            skip: queryOptions.skip,
+            take: queryOptions.limit,
+            orderBy: {
+                [queryOptions.sortBy]: queryOptions.sortOrder
+            }
+        }),
+        prisma.vendorProfile.count({
+            where: whereClause
+        })
+    ]);
+
+    return {
+        data: vendors,
+        meta: buildPaginationMeta(total, queryOptions.page, queryOptions.limit)
+    };
 };
 
 const getVendorDetails = async (id: string) => {
@@ -56,18 +88,7 @@ const getVendorDetails = async (id: string) => {
             isActive: true,
             isApproved: true
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true
-                }
-            }
-        }
+        include: vendorWithUserInclude
     });
 
     if (!vendor) {
@@ -152,18 +173,7 @@ const updateMyVendorProfile = async (vendorUserId: string, payload: TUpdateMyVen
                 ...(payload.description && { description: payload.description }),
                 ...(payload.address && { address: payload.address })
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                        createdAt: true,
-                        updatedAt: true
-                    }
-                }
-            }
+            include: vendorWithUserInclude
         });
     });
 

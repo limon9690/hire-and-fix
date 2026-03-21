@@ -1,9 +1,19 @@
 import { Request, Response } from "express";
 import status from "http-status";
+import { BookingStatus, PaymentStatus } from "../../../../prisma/generated/prisma/enums";
 import { sendResponse } from "../../utils/sendResponse";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { AdminServices } from "./admin.service";
 import { TUpdateUserStatusPayload, TUpdateVendorApprovalPayload } from "./admin.validation";
+
+const getEnumQueryValue = <T extends string>(value: unknown, enumValues: readonly T[]) => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    return enumValues.includes(value as T) ? (value as T) : undefined;
+};
 
 const getDashboardSummary = catchAsync(async (req: Request, res: Response) => {
     const result = await AdminServices.getDashboardSummary();
@@ -17,35 +27,79 @@ const getDashboardSummary = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-    const result = await AdminServices.getAllUsers();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["name", "email", "createdAt", "updatedAt"]
+    });
+
+    const result = await AdminServices.getAllUsers(queryOptions);
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Users retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 
 const getAllBookings = catchAsync(async (req: Request, res: Response) => {
-    const result = await AdminServices.getAllBookings();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "startTime", "endTime", "bookingStatus", "paymentStatus", "totalPrice"]
+    });
+
+    const bookingStatus = getEnumQueryValue(
+        req.query.bookingStatus,
+        Object.values(BookingStatus) as BookingStatus[]
+    );
+
+    const paymentStatus = getEnumQueryValue(
+        req.query.paymentStatus,
+        Object.values(PaymentStatus) as PaymentStatus[]
+    );
+
+    const result = await AdminServices.getAllBookings(queryOptions, {
+        bookingStatus,
+        paymentStatus
+    });
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Bookings retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 
 const getAllPayments = catchAsync(async (req: Request, res: Response) => {
-    const result = await AdminServices.getAllPayments();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "updatedAt", "status", "amount", "paidAt"]
+    });
+
+    const paymentStatus = getEnumQueryValue(
+        req.query.status,
+        Object.values(PaymentStatus) as PaymentStatus[]
+    );
+
+    const result = await AdminServices.getAllPayments(queryOptions, {
+        status: paymentStatus
+    });
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Payments retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 

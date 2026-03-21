@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import status from "http-status";
 import { sendResponse } from "../../utils/sendResponse";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { ServiceCategoryServices } from "./serviceCategory.service";
 import { TCreateServiceCategoryPayload, TUpdateServiceCategoryPayload } from "./serviceCategory.validation";
 
@@ -18,13 +19,21 @@ const createServiceCategory = catchAsync(async (req: Request, res: Response) => 
 });
 
 const getAllServiceCategories = catchAsync(async (req: Request, res: Response) => {
-    const result = await ServiceCategoryServices.getAllServiceCategories();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "name",
+        allowedSortFields: ["name", "description"]
+    });
+
+    const result = await ServiceCategoryServices.getAllServiceCategories(queryOptions);
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Service categories retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 

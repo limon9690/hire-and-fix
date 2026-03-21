@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import status from "http-status";
+import { BookingStatus, PaymentStatus } from "../../../../prisma/generated/prisma/enums";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { sendResponse } from "../../utils/sendResponse";
 import { BookingServices } from "./booking.service";
 import {
@@ -8,6 +10,14 @@ import {
     TUpdateBookingStatusByEmployeePayload,
     TUpdateBookingStatusByVendorPayload
 } from "./booking.validation";
+
+const getEnumQueryValue = <T extends string>(value: unknown, enumValues: readonly T[]) => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    return enumValues.includes(value as T) ? (value as T) : undefined;
+};
 
 const createBooking = catchAsync(async (req: Request, res: Response) => {
     const result = await BookingServices.createBooking(
@@ -24,13 +34,39 @@ const createBooking = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyBookings = catchAsync(async (req: Request, res: Response) => {
-    const result = await BookingServices.getMyBookings(req.user.userId, req.user.role);
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "startTime", "endTime", "bookingStatus", "paymentStatus", "totalPrice"]
+    });
+
+    const bookingStatus = getEnumQueryValue(
+        req.query.bookingStatus,
+        Object.values(BookingStatus) as BookingStatus[]
+    );
+
+    const paymentStatus = getEnumQueryValue(
+        req.query.paymentStatus,
+        Object.values(PaymentStatus) as PaymentStatus[]
+    );
+
+    const result = await BookingServices.getMyBookings(
+        req.user.userId,
+        req.user.role,
+        queryOptions,
+        {
+            bookingStatus,
+            paymentStatus
+        }
+    );
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Bookings retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 

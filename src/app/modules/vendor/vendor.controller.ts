@@ -1,18 +1,53 @@
 import { Request, Response } from "express";
 import status from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { sendResponse } from "../../utils/sendResponse";
 import { VendorServices } from "./vendor.service";
 import { TUpdateMyVendorPayload } from "./vendor.validation";
 
+const parseBooleanQuery = (value: unknown): boolean | undefined => {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    if (value === "true") {
+        return true;
+    }
+
+    if (value === "false") {
+        return false;
+    }
+
+    return undefined;
+};
+
 const getAllVendors = catchAsync(async (req: Request, res: Response) => {
-    const result = await VendorServices.getAllVendors();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "vendorName",
+        allowedSortFields: ["vendorName", "isApproved", "isActive"]
+    });
+
+    const isApproved = parseBooleanQuery(req.query.isApproved);
+    const isActive = parseBooleanQuery(req.query.isActive);
+    const vendorName = typeof req.query.vendorName === "string"
+        ? req.query.vendorName.trim()
+        : undefined;
+
+    const result = await VendorServices.getAllVendors(queryOptions, {
+        isApproved,
+        isActive,
+        vendorName: vendorName && vendorName.length > 0 ? vendorName : undefined
+    });
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Vendors retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 

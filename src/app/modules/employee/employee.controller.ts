@@ -1,18 +1,27 @@
 import { Request, Response } from "express";
 import status from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
+import { parseQueryOptions } from "../../utils/queryHelpers";
 import { sendResponse } from "../../utils/sendResponse";
 import { EmployeeServices } from "./employee.service";
 import { TUpdateEmployeePayload, TUpdateMyProfilePayload } from "./employee.validation";
 
 const getAllEmployees = catchAsync(async (req: Request, res: Response) => {
-    const result = await EmployeeServices.getAllEmployees();
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "updatedAt", "hourlyRate", "experienceYears", "isActive"]
+    });
+
+    const result = await EmployeeServices.getAllEmployees(queryOptions);
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Employees retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 
@@ -28,13 +37,21 @@ const getEmployeeDetails = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyEmployees = catchAsync(async (req: Request, res: Response) => {
-    const result = await EmployeeServices.getMyEmployees(req.user.userId);
+    const queryOptions = parseQueryOptions(req.query as Record<string, unknown>, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "updatedAt", "hourlyRate", "experienceYears", "isActive"]
+    });
+
+    const result = await EmployeeServices.getMyEmployees(req.user.userId, queryOptions);
 
     sendResponse(res, {
         statusCode: status.OK,
         success: true,
         message: "Vendor employees retrieved successfully",
-        data: result
+        data: result.data,
+        meta: result.meta
     });
 });
 
