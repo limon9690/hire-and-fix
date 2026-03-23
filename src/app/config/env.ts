@@ -16,6 +16,7 @@ interface IEnvVariable {
   CLIENT_SUCCESS_URL: string;
   CLIENT_CANCEL_URL: string;
   STRIPE_CURRENCY: string;
+  FRONTEND_URLS: string;
 }
 
 const setEnvVariables = (): IEnvVariable => {
@@ -33,7 +34,8 @@ const setEnvVariables = (): IEnvVariable => {
     "STRIPE_PUBLISHABLE_KEY", 
     "STRIPE_WEBHOOK_SECRET",
     "CLIENT_SUCCESS_URL",
-    "CLIENT_CANCEL_URL"
+    "CLIENT_CANCEL_URL",
+    "FRONTEND_URLS"
   ]
 
   envVars.forEach((envVar) => {
@@ -57,7 +59,8 @@ const setEnvVariables = (): IEnvVariable => {
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
     CLIENT_SUCCESS_URL: process.env.CLIENT_SUCCESS_URL as string,
     CLIENT_CANCEL_URL: process.env.CLIENT_CANCEL_URL as string,
-    STRIPE_CURRENCY: (process.env.STRIPE_CURRENCY as string) || "usd"
+    STRIPE_CURRENCY: (process.env.STRIPE_CURRENCY as string) || "usd",
+    FRONTEND_URLS: process.env.FRONTEND_URLS as string
   };
 }
 

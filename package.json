@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "tsc",
+    "build": "prisma generate && tsup",
+    "postinstall": "prisma generate",
     "dev": "tsx watch src/server.ts",
     "migrate": "prisma migrate dev",
     "generate": "prisma generate",
@@ -52,6 +53,7 @@
     "prettier": "^3.8.1",
     "prisma": "^7.5.0",
     "ts-node-dev": "^2.0.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

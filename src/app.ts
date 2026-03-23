@@ -5,6 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
+import { envVars } from './app/config/env';
 import { notFound } from './app/middlewares/notFound';
 import { globalErrorHandler } from './app/middlewares/globalErrorHandler';
 import { PaymentControllers } from './app/modules/payment/payment.controller';
@@ -13,13 +14,36 @@ import { AppRoutes } from './app/routes';
 const app: Application = express();
 const openApiPath = path.resolve(process.cwd(), "docs", "openapi.yaml");
 const openApiDocument = YAML.parse(fs.readFileSync(openApiPath, "utf8"));
+const allowedOrigins = envVars.FRONTEND_URLS
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 
 app.post('/api/v1/payments/webhook', express.raw({ type: 'application/json' }), PaymentControllers.handleStripeWebhook);
 
 // parsers
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 
 app.get("/docs/openapi.yaml", (req: Request, res: Response) => {
