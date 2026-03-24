@@ -32,14 +32,14 @@ const getAllVendors = catchAsync(async (req: Request, res: Response) => {
 
     const isApproved = parseBooleanQuery(req.query.isApproved);
     const isActive = parseBooleanQuery(req.query.isActive);
-    const vendorName = typeof req.query.vendorName === "string"
-        ? req.query.vendorName.trim()
+    const searchTerm = typeof req.query.searchTerm === "string"
+        ? req.query.searchTerm.trim()
         : undefined;
 
     const result = await VendorServices.getAllVendors(queryOptions, {
         isApproved,
         isActive,
-        vendorName: vendorName && vendorName.length > 0 ? vendorName : undefined
+        searchTerm: searchTerm && searchTerm.length > 0 ? searchTerm : undefined
     });
 
     sendResponse(res, {

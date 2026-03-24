@@ -23,7 +23,7 @@ const vendorWithUserInclude = {
 type TGetAllVendorsFilters = {
     isApproved?: boolean;
     isActive?: boolean;
-    vendorName?: string;
+    searchTerm?: string;
 };
 
 const getReviewSummaryByVendorId = async (vendorId: string) => {
@@ -52,9 +52,9 @@ const getAllVendors = async (queryOptions: TQueryOptions, filters: TGetAllVendor
     const whereClause = {
         ...(filters.isActive !== undefined && { isActive: filters.isActive }),
         ...(filters.isApproved !== undefined && { isApproved: filters.isApproved }),
-        ...(filters.vendorName && {
+        ...(filters.searchTerm && {
             vendorName: {
-                contains: filters.vendorName,
+                contains: filters.searchTerm,
                 mode: "insensitive" as const
             }
         })
