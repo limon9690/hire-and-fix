@@ -74,6 +74,13 @@ const createCheckoutSession = async (bookingId: string, userId: string) => {
         return upsertedPayment;
     });
 
+    const successUrl = new URL(envVars.CLIENT_SUCCESS_URL);
+    successUrl.searchParams.set("bookingId", booking.id);
+    successUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+
+    const cancelUrl = new URL(envVars.CLIENT_CANCEL_URL);
+    cancelUrl.searchParams.set("bookingId", booking.id);
+
     const session = await stripe.checkout.sessions.create({
         mode: "payment",
         payment_method_types: ["card"],
@@ -89,8 +96,8 @@ const createCheckoutSession = async (bookingId: string, userId: string) => {
                 }
             }
         ],
-        success_url: envVars.CLIENT_SUCCESS_URL,
-        cancel_url: envVars.CLIENT_CANCEL_URL,
+        success_url: successUrl.toString(),
+        cancel_url: cancelUrl.toString(),
         client_reference_id: booking.id,
         metadata: {
             bookingId: booking.id,
