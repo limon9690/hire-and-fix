@@ -1095,9 +1095,32 @@ var getDashboardSummary = async () => {
     totalRevenue: Number(revenueAggregate._sum.amount ?? 0)
   };
 };
-var getAllUsers = async (queryOptions) => {
+var getAllUsers = async (queryOptions, filters = {}) => {
+  const whereClause = {
+    ...filters.role && { role: filters.role },
+    ...filters.searchTerm && {
+      OR: [
+        {
+          name: {
+            contains: filters.searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          email: {
+            contains: filters.searchTerm,
+            mode: "insensitive"
+          }
+        }
+      ]
+    },
+    ...filters.isActive !== void 0 ? {
+      ...filters.role === Role.USER ? { profile: { is: { isActive: filters.isActive } } } : filters.role === Role.VENDOR ? { vendorProfile: { is: { isActive: filters.isActive } } } : filters.role === Role.EMPLOYEE ? { employeeProfile: { is: { isActive: filters.isActive } } } : {}
+    } : {}
+  };
   const [users, total] = await Promise.all([
     prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -1112,7 +1135,9 @@ var getAllUsers = async (queryOptions) => {
         [queryOptions.sortBy]: queryOptions.sortOrder
       }
     }),
-    prisma.user.count()
+    prisma.user.count({
+      where: whereClause
+    })
   ]);
   return {
     data: users,
@@ -1379,7 +1404,17 @@ var getAllUsers2 = catchAsync(async (req, res) => {
     defaultSortBy: "createdAt",
     allowedSortFields: ["name", "email", "createdAt", "updatedAt"]
   });
-  const result = await AdminServices.getAllUsers(queryOptions);
+  const searchTerm = typeof req.query.searchTerm === "string" ? req.query.searchTerm.trim() : void 0;
+  const role = getEnumQueryValue(
+    req.query.role,
+    Object.values(Role)
+  );
+  const isActive = typeof req.query.isActive === "string" ? req.query.isActive === "true" ? true : req.query.isActive === "false" ? false : void 0 : void 0;
+  const result = await AdminServices.getAllUsers(queryOptions, {
+    searchTerm: searchTerm || void 0,
+    role,
+    isActive
+  });
   sendResponse(res, {
     statusCode: status9.OK,
     success: true,

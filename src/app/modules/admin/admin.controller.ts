@@ -81,10 +81,14 @@ const getAllBookings = catchAsync(async (req: Request, res: Response) => {
         req.query.paymentStatus,
         Object.values(PaymentStatus) as PaymentStatus[]
     );
+    const searchTerm = typeof req.query.searchTerm === "string"
+        ? req.query.searchTerm.trim()
+        : undefined;
 
     const result = await AdminServices.getAllBookings(queryOptions, {
         bookingStatus,
-        paymentStatus
+        paymentStatus,
+        searchTerm: searchTerm || undefined
     });
 
     sendResponse(res, {

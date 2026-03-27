@@ -60,6 +60,7 @@ const paymentDetailsInclude = {
 type TGetAllBookingsFilters = {
     bookingStatus?: BookingStatus;
     paymentStatus?: PaymentStatus;
+    searchTerm?: string;
 };
 
 type TGetAllPaymentsFilters = {
@@ -230,7 +231,67 @@ const getAllUsers = async (queryOptions: TQueryOptions, filters: TGetAllUsersFil
 const getAllBookings = async (queryOptions: TQueryOptions, filters: TGetAllBookingsFilters) => {
     const whereClause = {
         ...(filters.bookingStatus && { bookingStatus: filters.bookingStatus }),
-        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus })
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.searchTerm && {
+            OR: [
+                {
+                    user: {
+                        name: {
+                            contains: filters.searchTerm,
+                            mode: "insensitive" as const
+                        }
+                    }
+                },
+                {
+                    user: {
+                        email: {
+                            contains: filters.searchTerm,
+                            mode: "insensitive" as const
+                        }
+                    }
+                },
+                {
+                    vendor: {
+                        vendorName: {
+                            contains: filters.searchTerm,
+                            mode: "insensitive" as const
+                        }
+                    }
+                },
+                {
+                    employee: {
+                        user: {
+                            name: {
+                                contains: filters.searchTerm,
+                                mode: "insensitive" as const
+                            }
+                        }
+                    }
+                },
+                {
+                    employee: {
+                        user: {
+                            email: {
+                                contains: filters.searchTerm,
+                                mode: "insensitive" as const
+                            }
+                        }
+                    }
+                },
+                {
+                    serviceAddress: {
+                        contains: filters.searchTerm,
+                        mode: "insensitive" as const
+                    }
+                },
+                {
+                    note: {
+                        contains: filters.searchTerm,
+                        mode: "insensitive" as const
+                    }
+                }
+            ]
+        })
     };
 
     const [bookings, total] = await Promise.all([
