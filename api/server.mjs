@@ -1147,7 +1147,67 @@ var getAllUsers = async (queryOptions, filters = {}) => {
 var getAllBookings = async (queryOptions, filters) => {
   const whereClause = {
     ...filters.bookingStatus && { bookingStatus: filters.bookingStatus },
-    ...filters.paymentStatus && { paymentStatus: filters.paymentStatus }
+    ...filters.paymentStatus && { paymentStatus: filters.paymentStatus },
+    ...filters.searchTerm && {
+      OR: [
+        {
+          user: {
+            name: {
+              contains: filters.searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          user: {
+            email: {
+              contains: filters.searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          vendor: {
+            vendorName: {
+              contains: filters.searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          employee: {
+            user: {
+              name: {
+                contains: filters.searchTerm,
+                mode: "insensitive"
+              }
+            }
+          }
+        },
+        {
+          employee: {
+            user: {
+              email: {
+                contains: filters.searchTerm,
+                mode: "insensitive"
+              }
+            }
+          }
+        },
+        {
+          serviceAddress: {
+            contains: filters.searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          note: {
+            contains: filters.searchTerm,
+            mode: "insensitive"
+          }
+        }
+      ]
+    }
   };
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({
@@ -1438,9 +1498,11 @@ var getAllBookings2 = catchAsync(async (req, res) => {
     req.query.paymentStatus,
     Object.values(PaymentStatus)
   );
+  const searchTerm = typeof req.query.searchTerm === "string" ? req.query.searchTerm.trim() : void 0;
   const result = await AdminServices.getAllBookings(queryOptions, {
     bookingStatus,
-    paymentStatus
+    paymentStatus,
+    searchTerm: searchTerm || void 0
   });
   sendResponse(res, {
     statusCode: status9.OK,

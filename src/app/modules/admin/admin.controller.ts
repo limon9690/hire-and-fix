@@ -112,9 +112,13 @@ const getAllPayments = catchAsync(async (req: Request, res: Response) => {
         req.query.status,
         Object.values(PaymentStatus) as PaymentStatus[]
     );
+    const searchTerm = typeof req.query.searchTerm === "string"
+        ? req.query.searchTerm.trim()
+        : undefined;
 
     const result = await AdminServices.getAllPayments(queryOptions, {
-        status: paymentStatus
+        status: paymentStatus,
+        searchTerm: searchTerm || undefined
     });
 
     sendResponse(res, {
