@@ -3,7 +3,11 @@
 Role-based backend API for a home-services booking platform where users book service employees managed by vendors.
 
 ## Live API
-- `https://hire-and-fix-backend.vercel.app`
+https://hire-and-fix-backend.vercel.app
+
+## Live Links
+- Frontend: https://hire-and-fix-frontend.vercel.app
+- Swagger UI: https://hire-and-fix-backend.vercel.app/docs/
 
 ## What This Project Covers
 - JWT auth with role-based access (`ADMIN`, `VENDOR`, `EMPLOYEE`, `USER`)

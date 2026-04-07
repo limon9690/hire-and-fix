@@ -1,10 +1,8 @@
 import express, { Application, Request, Response } from 'express';
-import fs from "fs";
 import path from "path";
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import swaggerUi from "swagger-ui-express";
-import YAML from "yaml";
 import { envVars } from './app/config/env';
 import { notFound } from './app/middlewares/notFound';
 import { globalErrorHandler } from './app/middlewares/globalErrorHandler';
@@ -13,7 +11,6 @@ import { AppRoutes } from './app/routes';
 
 const app: Application = express();
 const openApiPath = path.resolve(process.cwd(), "docs", "openapi.yaml");
-const openApiDocument = YAML.parse(fs.readFileSync(openApiPath, "utf8"));
 const allowedOrigins = envVars.FRONTEND_URLS
   .split(",")
   .map((origin) => origin.trim().replace(/\/$/, ""))
@@ -50,7 +47,29 @@ app.get("/docs/openapi.yaml", (req: Request, res: Response) => {
   res.sendFile(openApiPath);
 });
 
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+app.use(
+  "/docs",
+  express.static(path.join(process.cwd(), "public", "swagger-ui"), {
+    index: false,
+  })
+);
+
+app.get("/docs", (req: Request, res: Response, next) => {
+  if (req.originalUrl === "/docs") {
+    res.redirect(301, "/docs/");
+    return;
+  }
+
+  next();
+});
+
+app.use(
+  "/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(undefined, {
+    swaggerUrl: "/docs/openapi.yaml",
+  })
+);
 
 
 app.use('/api/v1', AppRoutes);
