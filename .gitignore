@@ -6,6 +6,7 @@ dist
 /prisma/generated
 docs/project-deep-dive.md
 .vercel
+.vscode/
 AGENTS.md
 coverage/
 api/
