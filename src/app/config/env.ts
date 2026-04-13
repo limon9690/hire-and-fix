@@ -17,6 +17,8 @@ interface IEnvVariable {
   CLIENT_CANCEL_URL: string;
   STRIPE_CURRENCY: string;
   FRONTEND_URLS: string;
+  REDIS_URL: string | null;
+  REDIS_ENABLED: boolean;
 }
 
 const setEnvVariables = (): IEnvVariable => {
@@ -60,7 +62,11 @@ const setEnvVariables = (): IEnvVariable => {
     CLIENT_SUCCESS_URL: process.env.CLIENT_SUCCESS_URL as string,
     CLIENT_CANCEL_URL: process.env.CLIENT_CANCEL_URL as string,
     STRIPE_CURRENCY: (process.env.STRIPE_CURRENCY as string) || "usd",
-    FRONTEND_URLS: process.env.FRONTEND_URLS as string
+    FRONTEND_URLS: process.env.FRONTEND_URLS as string,
+    REDIS_URL: process.env.REDIS_URL || null,
+    REDIS_ENABLED: process.env.REDIS_ENABLED
+      ? process.env.REDIS_ENABLED === "true"
+      : true
   };
 }
 
