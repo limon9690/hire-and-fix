@@ -2,6 +2,7 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus, Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { deleteByPrefix } from "../../utils/cache";
 import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateUserStatusPayload, TUpdateVendorApprovalPayload } from "./admin.validation";
 
@@ -72,6 +73,14 @@ type TGetAllUsersFilters = {
     searchTerm?: string;
     role?: Role;
     isActive?: boolean;
+};
+
+const invalidateVendorCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/vendors");
+    } catch (error) {
+        console.warn("Vendor cache invalidation failed:", error);
+    }
 };
 
 const getDashboardSummary = async () => {
@@ -612,6 +621,8 @@ const updateVendorApproval = async (id: string, payload: TUpdateVendorApprovalPa
             }
         }
     });
+
+    await invalidateVendorCache();
 
     return updatedVendor;
 };

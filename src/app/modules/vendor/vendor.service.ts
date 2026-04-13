@@ -2,6 +2,7 @@ import status from "http-status";
 import { BookingStatus, PaymentStatus } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { deleteByPrefix } from "../../utils/cache";
 import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateMyVendorPayload } from "./vendor.validation";
 
@@ -24,6 +25,14 @@ type TGetAllVendorsFilters = {
     isApproved?: boolean;
     isActive?: boolean;
     searchTerm?: string;
+};
+
+const invalidateVendorCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/vendors");
+    } catch (error) {
+        console.warn("Vendor cache invalidation failed:", error);
+    }
 };
 
 const getReviewSummaryByVendorId = async (vendorId: string) => {
@@ -176,6 +185,8 @@ const updateMyVendorProfile = async (vendorUserId: string, payload: TUpdateMyVen
             include: vendorWithUserInclude
         });
     });
+
+    await invalidateVendorCache();
 
     return updatedVendor;
 };
