@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { Role } from "../../../../prisma/generated/prisma/enums";
 import { auth } from "../../middlewares/auth";
+import { cacheResponse } from "../../middlewares/cache";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { EmployeeControllers } from "./employee.controller";
 import { employeeValidationSchemas } from "./employee.validation";
 
 const router = Router();
 
-router.get("/", EmployeeControllers.getAllEmployees);
+router.get("/", cacheResponse(300), EmployeeControllers.getAllEmployees);
 
 router.patch(
     "/me",
@@ -27,6 +28,6 @@ router.patch(
 
 router.delete("/my/:id", auth(Role.VENDOR), EmployeeControllers.deleteMyEmployee);
 
-router.get("/:id", EmployeeControllers.getEmployeeDetails);
+router.get("/:id", cacheResponse(300), EmployeeControllers.getEmployeeDetails);
 
 export const EmployeeRoutes = router;

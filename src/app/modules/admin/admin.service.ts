@@ -83,6 +83,14 @@ const invalidateVendorCache = async () => {
     }
 };
 
+const invalidateEmployeeCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/employees");
+    } catch (error) {
+        console.warn("Employee cache invalidation failed:", error);
+    }
+};
+
 const getDashboardSummary = async () => {
     const [
         totalUsers,
@@ -580,6 +588,7 @@ const updateUserStatus = async (id: string, payload: TUpdateUserStatusPayload) =
                 }
             }
         });
+        await invalidateEmployeeCache();
     } else if (user.role === Role.ADMIN) {
         throw new AppError(status.BAD_REQUEST, "Admin status cannot be updated through profile status endpoint");
     }

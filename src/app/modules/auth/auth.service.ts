@@ -3,10 +3,18 @@ import status from "http-status";
 import { Role } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { deleteByPrefix } from "../../utils/cache";
 import { TCreateEmployeePayload, TLoginPayload, TUserRegisterPayload, TVendorRegisterPayload } from "./auth.validation";
 import { envVars } from "../../config/env";
 import { generateAccessToken } from "./auth.utils";
 
+const invalidateEmployeeCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/employees");
+    } catch (error) {
+        console.warn("Employee cache invalidation failed:", error);
+    }
+};
 
 const registerUser = async (payload: TUserRegisterPayload) => {
     const existingUser = await prisma.user.findUnique({
@@ -118,7 +126,7 @@ const registerVendor = async (payload: TVendorRegisterPayload) => {
 const createEmployee = async (vendorUserId: string, payload: TCreateEmployeePayload) => {
     const normalizedEmail = payload.email.toLowerCase();
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const [vendorProfile, existingUser, serviceCategory] = await Promise.all([
             tx.vendorProfile.findUnique({
                 where: {
@@ -190,6 +198,10 @@ const createEmployee = async (vendorUserId: string, payload: TCreateEmployeePayl
             employeeProfile
         };
     });
+
+    await invalidateEmployeeCache();
+
+    return result;
 };
 
 const login = async (payload: TLoginPayload) => {

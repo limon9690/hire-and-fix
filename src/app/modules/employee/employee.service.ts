@@ -2,6 +2,7 @@ import status from "http-status";
 import { BookingStatus } from "../../../../prisma/generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { deleteByPrefix } from "../../utils/cache";
 import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TUpdateEmployeePayload, TUpdateMyProfilePayload } from "./employee.validation";
 
@@ -38,6 +39,14 @@ type TEmployeeListFilters = {
     searchTerm?: string;
     serviceCategoryId?: string;
     isActive?: boolean;
+};
+
+const invalidateEmployeeCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/employees");
+    } catch (error) {
+        console.warn("Employee cache invalidation failed:", error);
+    }
 };
 
 const getAllEmployees = async (
@@ -239,6 +248,8 @@ const deleteMyEmployee = async (vendorUserId: string, employeeId: string) => {
         include: employeeDetailsInclude
     });
 
+    await invalidateEmployeeCache();
+
     return deletedEmployee;
 };
 
@@ -330,6 +341,8 @@ const updateMyEmployee = async (
         });
     });
 
+    await invalidateEmployeeCache();
+
     return updatedEmployee;
 };
 
@@ -366,6 +379,8 @@ const updateMyProfile = async (
         },
         include: employeeDetailsInclude
     });
+
+    await invalidateEmployeeCache();
 
     return updatedEmployee;
 };
