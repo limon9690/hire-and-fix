@@ -1,8 +1,17 @@
 import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { deleteByPrefix } from "../../utils/cache";
 import { buildPaginationMeta, TQueryOptions } from "../../utils/queryHelpers";
 import { TCreateServiceCategoryPayload, TUpdateServiceCategoryPayload } from "./serviceCategory.validation";
+
+const invalidateServiceCategoryCache = async () => {
+    try {
+        await deleteByPrefix("cache:/api/v1/service-categories");
+    } catch (error) {
+        console.warn("Service category cache invalidation failed:", error);
+    }
+};
 
 const createServiceCategory = async (payload: TCreateServiceCategoryPayload) => {
     const existingServiceCategory = await prisma.serviceCategory.findUnique({
@@ -21,6 +30,8 @@ const createServiceCategory = async (payload: TCreateServiceCategoryPayload) => 
             description: payload.description
         }
     });
+
+    await invalidateServiceCategoryCache();
 
     return serviceCategory;
 };
@@ -112,6 +123,8 @@ const updateServiceCategory = async (id: string, payload: TUpdateServiceCategory
         }
     });
 
+    await invalidateServiceCategoryCache();
+
     return updatedServiceCategory;
 };
 
@@ -131,6 +144,8 @@ const deleteServiceCategory = async (id: string) => {
             id
         }
     });
+
+    await invalidateServiceCategoryCache();
 
     return deletedServiceCategory;
 };
