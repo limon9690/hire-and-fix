@@ -4,6 +4,7 @@ import { auth } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { BookingControllers } from "./booking.controller";
 import { bookingValidationSchemas } from "./booking.validation";
+import { createBookingRateLimiter } from "../../config/rateLimitPolicies";
 
 const router = Router();
 
@@ -42,6 +43,7 @@ router.patch(
 router.post(
     "/",
     auth(Role.USER),
+    createBookingRateLimiter,
     validateRequest(bookingValidationSchemas.createBookingSchema),
     BookingControllers.createBooking
 );
