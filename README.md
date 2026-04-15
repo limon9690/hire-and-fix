@@ -23,6 +23,13 @@ https://hire-and-fix-backend.vercel.app
 - Zod validation
 - Cookie-based JWT auth
 - Stripe (Checkout + Webhooks)
+- Redis (ioredis) — response caching and rate limiting
+
+## Infrastructure & Performance
+
+- **Response Caching** — Cache-aside pattern via Redis on shared GET endpoints (vendors, employees, service categories). TTL-based with prefix invalidation on writes. Graceful degradation if Redis is unavailable. → [details](docs/CACHING.md)
+- **Rate Limiting** — Fixed-window Redis-backed limiting on auth and booking endpoints. Policy-based design with per-route thresholds and key strategies. Returns 429 with `Retry-After`. → [details](docs/RATE_LIMITING.md)
+- **Message Queue** — *(coming soon)* BullMQ-based background job processing for async tasks.
 
 ## Quick Start
 ```bash
@@ -56,6 +63,16 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 CLIENT_SUCCESS_URL=http://localhost:3000/payment/success
 CLIENT_CANCEL_URL=http://localhost:3000/payment/cancel
 STRIPE_CURRENCY=usd
+
+FRONTEND_URLS=http://localhost:3000,https://your-frontend.vercel.app
+
+REDIS_URL=redis://...
+REDIS_ENABLED=true
+LOGIN_RATE_LIMIT_WINDOW_SECONDS=900
+LOGIN_RATE_LIMIT_MAX_ATTEMPTS=5
+BOOKING_RATE_LIMIT_WINDOW_SECONDS=300
+BOOKING_RATE_LIMIT_MAX_REQUESTS=10
+TRUST_PROXY=true
 ```
 
 ## API Overview
@@ -132,6 +149,8 @@ Use the generated `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
 - API Base (Production): `https://hire-and-fix-backend.vercel.app`
 - OpenAPI Spec: [docs/openapi.yaml](docs/openapi.yaml)
 - [Architecture Overview](docs/architecture.md)
+- [Redis Caching](docs/CACHING.md)
+- [Rate Limiting](docs/RATE_LIMITING.md)
 
 ## Notes
 - Admin seeding runs on server startup (if admin does not exist).

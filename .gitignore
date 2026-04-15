@@ -5,7 +5,6 @@ dist
 !.env.example
 /prisma/generated
 docs/project-deep-dive.md
-docs/redis-caching.md
 .vercel
 .vscode/
 AGENTS.md
