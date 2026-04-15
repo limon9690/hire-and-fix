@@ -19,7 +19,22 @@ interface IEnvVariable {
   FRONTEND_URLS: string;
   REDIS_URL: string | null;
   REDIS_ENABLED: boolean;
+  TRUST_PROXY: boolean;
+  LOGIN_RATE_LIMIT_WINDOW_SECONDS: number;
+  LOGIN_RATE_LIMIT_MAX_ATTEMPTS: number;
+  BOOKING_RATE_LIMIT_WINDOW_SECONDS: number;
+  BOOKING_RATE_LIMIT_MAX_REQUESTS: number;
 }
+
+const parseIntegerWithDefault = (value: string | undefined, fallback: number): number => {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+
+  return Number.isNaN(parsedValue) ? fallback : parsedValue;
+};
 
 const setEnvVariables = (): IEnvVariable => {
   const envVars = [
@@ -66,7 +81,26 @@ const setEnvVariables = (): IEnvVariable => {
     REDIS_URL: process.env.REDIS_URL || null,
     REDIS_ENABLED: process.env.REDIS_ENABLED
       ? process.env.REDIS_ENABLED === "true"
-      : true
+      : true,
+    TRUST_PROXY: process.env.TRUST_PROXY
+      ? process.env.TRUST_PROXY === "true"
+      : true,
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: parseIntegerWithDefault(
+      process.env.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+      900
+    ),
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: parseIntegerWithDefault(
+      process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
+      5
+    ),
+    BOOKING_RATE_LIMIT_WINDOW_SECONDS: parseIntegerWithDefault(
+      process.env.BOOKING_RATE_LIMIT_WINDOW_SECONDS,
+      300
+    ),
+    BOOKING_RATE_LIMIT_MAX_REQUESTS: parseIntegerWithDefault(
+      process.env.BOOKING_RATE_LIMIT_MAX_REQUESTS,
+      10
+    )
   };
 }
 

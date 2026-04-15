@@ -16,6 +16,10 @@ const allowedOrigins = envVars.FRONTEND_URLS
   .map((origin) => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
+if (envVars.TRUST_PROXY) {
+  app.set("trust proxy", 1);
+}
+
 app.post('/api/v1/payments/webhook', express.raw({ type: 'application/json' }), PaymentControllers.handleStripeWebhook);
 
 // parsers
