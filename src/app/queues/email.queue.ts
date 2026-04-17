@@ -39,9 +39,13 @@ export const enqueueBookingConfirmationEmail = async (
         throw new Error("Email queue is not configured");
     }
 
-    await emailQueue.add(BOOKING_CONFIRMATION_EMAIL_JOB, payload, {
-        jobId: `booking-confirmation:${uniqueId}`
-    });
+    const jobId = `booking-confirmation-${uniqueId}`;
+
+    if (queueConnection && queueConnection.status !== "ready") {
+        await queueConnection.connect();
+    }
+
+    await emailQueue.add(BOOKING_CONFIRMATION_EMAIL_JOB, payload, { jobId });
 };
 
 export const EmailQueueConfig = {

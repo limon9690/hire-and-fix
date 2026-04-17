@@ -191,6 +191,7 @@ const handleStripeWebhook = async (payload: Buffer, signature: string) => {
     switch (event.type) {
         case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
+
             const payment = await updatePaymentStateFromCheckoutSession(
                 session,
                 PaymentStatus.SUCCESSFUL
@@ -202,12 +203,20 @@ const handleStripeWebhook = async (payload: Buffer, signature: string) => {
                 throw new AppError(status.BAD_REQUEST, "Booking ID is missing in checkout session metadata");
             }
 
-            await enqueueBookingConfirmationEmail(
-                {
-                    bookingId
-                },
-                uniqueId
-            );
+            try {
+                await enqueueBookingConfirmationEmail(
+                    {
+                        bookingId
+                    },
+                    uniqueId
+                );
+            } catch (error) {
+                console.error("Failed to enqueue booking confirmation email job", {
+                    bookingId,
+                    uniqueId,
+                    error
+                });
+            }
             break;
         }
         case "checkout.session.expired":
