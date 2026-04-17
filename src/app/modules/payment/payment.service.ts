@@ -5,6 +5,7 @@ import { envVars } from "../../config/env";
 import AppError from "../../errorHelpers/AppError";
 import { stripe } from "../../lib/stripe";
 import { prisma } from "../../lib/prisma";
+import { enqueueBookingConfirmationEmail } from "../../queues/email.queue";
 
 const createCheckoutSession = async (bookingId: string, userId: string) => {
     const booking = await prisma.booking.findUnique({
@@ -148,30 +149,30 @@ const updatePaymentStateFromCheckoutSession = async (
         return;
     }
 
-    if (payment.status === PaymentStatus.SUCCESSFUL) {
-        return;
+    if (payment.status !== PaymentStatus.SUCCESSFUL) {
+        await prisma.$transaction(async (tx) => {
+            await tx.payment.update({
+                where: {
+                    id: payment.id
+                },
+                data: {
+                    status: targetStatus,
+                    paidAt: targetStatus === PaymentStatus.SUCCESSFUL ? new Date() : null
+                }
+            });
+
+            await tx.booking.update({
+                where: {
+                    id: payment.bookingId
+                },
+                data: {
+                    paymentStatus: targetStatus
+                }
+            });
+        });
     }
 
-    await prisma.$transaction(async (tx) => {
-        await tx.payment.update({
-            where: {
-                id: payment.id
-            },
-            data: {
-                status: targetStatus,
-                paidAt: targetStatus === PaymentStatus.SUCCESSFUL ? new Date() : null
-            }
-        });
-
-        await tx.booking.update({
-            where: {
-                id: payment.bookingId
-            },
-            data: {
-                paymentStatus: targetStatus
-            }
-        });
-    });
+    return payment;
 };
 
 const handleStripeWebhook = async (payload: Buffer, signature: string) => {
@@ -190,7 +191,23 @@ const handleStripeWebhook = async (payload: Buffer, signature: string) => {
     switch (event.type) {
         case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
-            await updatePaymentStateFromCheckoutSession(session, PaymentStatus.SUCCESSFUL);
+            const payment = await updatePaymentStateFromCheckoutSession(
+                session,
+                PaymentStatus.SUCCESSFUL
+            );
+            const uniqueId = payment?.id || session.metadata?.paymentId || session.id;
+            const bookingId = payment?.bookingId || session.metadata?.bookingId;
+
+            if (!bookingId) {
+                throw new AppError(status.BAD_REQUEST, "Booking ID is missing in checkout session metadata");
+            }
+
+            await enqueueBookingConfirmationEmail(
+                {
+                    bookingId
+                },
+                uniqueId
+            );
             break;
         }
         case "checkout.session.expired":

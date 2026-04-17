@@ -24,6 +24,12 @@ interface IEnvVariable {
   LOGIN_RATE_LIMIT_MAX_ATTEMPTS: number;
   BOOKING_RATE_LIMIT_WINDOW_SECONDS: number;
   BOOKING_RATE_LIMIT_MAX_REQUESTS: number;
+  RESEND_API_KEY: string | null;
+  EMAIL_FROM: string | null;
+  EMAIL_REPLY_TO: string | null;
+  EMAIL_QUEUE_CONCURRENCY: number;
+  EMAIL_QUEUE_ATTEMPTS: number;
+  EMAIL_QUEUE_BACKOFF_MS: number;
 }
 
 const parseIntegerWithDefault = (value: string | undefined, fallback: number): number => {
@@ -100,6 +106,21 @@ const setEnvVariables = (): IEnvVariable => {
     BOOKING_RATE_LIMIT_MAX_REQUESTS: parseIntegerWithDefault(
       process.env.BOOKING_RATE_LIMIT_MAX_REQUESTS,
       10
+    ),
+    RESEND_API_KEY: process.env.RESEND_API_KEY || null,
+    EMAIL_FROM: process.env.EMAIL_FROM || null,
+    EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO || null,
+    EMAIL_QUEUE_CONCURRENCY: parseIntegerWithDefault(
+      process.env.EMAIL_QUEUE_CONCURRENCY,
+      5
+    ),
+    EMAIL_QUEUE_ATTEMPTS: parseIntegerWithDefault(
+      process.env.EMAIL_QUEUE_ATTEMPTS,
+      5
+    ),
+    EMAIL_QUEUE_BACKOFF_MS: parseIntegerWithDefault(
+      process.env.EMAIL_QUEUE_BACKOFF_MS,
+      3000
     )
   };
 }
