@@ -16,6 +16,9 @@ https://hire-and-fix-backend.vercel.app
 - Review system for completed bookings
 - Admin dashboards and platform management endpoints
 - Stripe Checkout integration with webhook-based payment confirmation
+- Redis response caching with TTL-based invalidation on write operations
+- Redis-backed rate limiting on auth and booking endpoints
+- Async booking confirmation emails via BullMQ job queue and Resend
 
 ## Tech Stack
 - Node.js, Express, TypeScript
@@ -23,13 +26,15 @@ https://hire-and-fix-backend.vercel.app
 - Zod validation
 - Cookie-based JWT auth
 - Stripe (Checkout + Webhooks)
-- Redis (ioredis) — response caching and rate limiting
+- Redis + ioredis — response caching and rate limiting
+- BullMQ — Redis-backed job queue for async processing
+- Resend — transactional email delivery
 
 ## Infrastructure & Performance
 
 - **Response Caching** — Cache-aside pattern via Redis on shared GET endpoints (vendors, employees, service categories). TTL-based with prefix invalidation on writes. Graceful degradation if Redis is unavailable. → [details](docs/CACHING.md)
-- **Rate Limiting** — Fixed-window Redis-backed limiting on auth and booking endpoints. Policy-based design with per-route thresholds and key strategies. Returns 429 with `Retry-After`. → [details](docs/RATE_LIMITING.md)
-- **Message Queue** — *(coming soon)* BullMQ-based background job processing for async tasks.
+- **Rate Limiting** — Fixed-window Redis-backed limiting on auth and booking endpoints. Policy-based design with per-route thresholds and key strategies. Returns 429 with `Retry-After`. → [details](docs/RATE-LIMITING.md)
+- **Email Queue** — BullMQ-backed async email processing via Resend. Booking confirmation emails are decoupled from the Stripe webhook handler using a Redis-backed job queue with exponential backoff retry. Worker runs as a separate persistent process. → [details](docs/EMAIL-QUEUE.md)
 
 ## Quick Start
 ```bash
@@ -44,36 +49,7 @@ Server:
 - API base: `http://localhost:5000/api/v1`
 
 ## Required Environment Variables
-```env
-NODE_ENV=development
-PORT=5000
-DATABASE_URL=postgresql://...
-
-BCRYPT_SALT_ROUNDS=10
-JWT_ACCESS_SECRET=...
-JWT_ACCESS_EXPIRES_IN=7d
-
-ADMIN_NAME=...
-ADMIN_EMAIL=...
-ADMIN_PASSWORD=...
-
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-CLIENT_SUCCESS_URL=http://localhost:3000/payment/success
-CLIENT_CANCEL_URL=http://localhost:3000/payment/cancel
-STRIPE_CURRENCY=usd
-
-FRONTEND_URLS=http://localhost:3000,https://your-frontend.vercel.app
-
-REDIS_URL=redis://...
-REDIS_ENABLED=true
-LOGIN_RATE_LIMIT_WINDOW_SECONDS=900
-LOGIN_RATE_LIMIT_MAX_ATTEMPTS=5
-BOOKING_RATE_LIMIT_WINDOW_SECONDS=300
-BOOKING_RATE_LIMIT_MAX_REQUESTS=10
-TRUST_PROXY=true
-```
+Use [.env.example](.env.example) as the single source of truth for all required variables and example values.
 
 ## API Overview
 
@@ -150,7 +126,8 @@ Use the generated `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
 - OpenAPI Spec: [docs/openapi.yaml](docs/openapi.yaml)
 - [Architecture Overview](docs/architecture.md)
 - [Redis Caching](docs/CACHING.md)
-- [Rate Limiting](docs/RATE_LIMITING.md)
+- [Rate Limiting](docs/RATE-LIMITING.md)
+- [Email Queue](docs/EMAIL-QUEUE.md)
 
 ## Notes
 - Admin seeding runs on server startup (if admin does not exist).
